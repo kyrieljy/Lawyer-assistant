@@ -1,0 +1,25 @@
+{
+  "name": "lawyer-case-assistant-h5",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Local",
+  "description": "Server-deployed H5 case progress assistant for lawyers.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc && vite build",
+    "start": "python scripts/server.py",
+    "serve": "python scripts/server.py",
+    "backend:check": "python scripts/backend.py init"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.0"
+  }
+}
