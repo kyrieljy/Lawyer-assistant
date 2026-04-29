@@ -77,7 +77,7 @@ DEFAULT_SETTINGS = {
     "backup_directory": "",
     "backup_retention_count": "14",
     "reminder_hour": "9",
-    "lawyer_name": "律师",
+    "lawyer_name": "律所",
     "reminder_grace_days": "0",
 }
 
@@ -1956,7 +1956,7 @@ def create_default_workbook(settings, mappings):
     column_count = max(len(mappings), 1)
     last_column = get_column_letter(column_count)
     ws.merge_cells(f"A1:{last_column}1")
-    ws["A1"] = f"{settings.get('lawyer_name') or '律师'}案件进度跟踪"
+    ws["A1"] = f"{settings.get('lawyer_name') or '律所'}案件进度跟踪表"
     ws["A1"].font = Font(name="Microsoft YaHei", bold=True, size=18)
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 42
@@ -1990,7 +1990,7 @@ def prepare_workbook(template_path, settings, mappings):
             if merged.min_row == 1 and merged.max_row == 1:
                 ws.unmerge_cells(str(merged))
         ws.merge_cells(f"A1:{last_column}1")
-        ws["A1"] = f"{settings.get('lawyer_name') or '律师'}案件进度跟踪"
+        ws["A1"] = f"{settings.get('lawyer_name') or '律所'}案件进度跟踪表"
         for idx, mapping in enumerate(mappings, start=1):
             ws.cell(2, idx).value = mapping["column_label"]
             if idx > 18:

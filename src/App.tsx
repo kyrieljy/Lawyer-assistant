@@ -166,7 +166,7 @@ const TAB_ITEMS = [
 ];
 
 const SETTINGS_GROUPS = [
-  ["lawyer_name", "律师姓名"],
+  ["lawyer_name", "律所名"],
   ["feishu_webhook_url", "飞书 Webhook URL"],
   ["feishu_webhook_secret", "飞书 Webhook 密钥"],
   ["llm_provider", "大模型 Provider"],
@@ -854,7 +854,7 @@ export default function App() {
   }
 
   async function exportExcel() {
-    const defaultName = `${settingsDraft.lawyer_name || "律师"}案件进度表${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx`;
+    const defaultName = `${settingsDraft.lawyer_name || "律所"}案件进度跟踪表${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx`;
     const outputPath = await window.lawyerAPI.chooseSavePath(defaultName);
     if (!outputPath) return;
     await withBusy("正在导出 Excel...", async () => {
