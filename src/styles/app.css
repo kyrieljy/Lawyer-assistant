@@ -262,7 +262,7 @@ h3,
   min-height: 100vh;
   display: grid;
   grid-template-columns: 330px minmax(0, 1fr);
-  transition: grid-template-columns 0.18s ease;
+  transition: grid-template-columns 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .app-shell.sidebar-collapsed {
@@ -280,7 +280,11 @@ h3,
   background: rgba(246, 251, 254, 0.76);
   border-right: 1px solid rgba(95, 119, 136, 0.12);
   backdrop-filter: blur(18px);
-  transition: padding 0.18s ease;
+  overflow: hidden;
+  transition:
+    padding 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    gap 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.32s ease;
 }
 
 .sidebar.collapsed {
@@ -292,6 +296,8 @@ h3,
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
+  transition: justify-content 0.32s cubic-bezier(0.22, 1, 0.36, 1), gap 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .brand-mark {
@@ -321,6 +327,35 @@ h3,
   font-size: 20px;
 }
 
+.brand-block > div:not(.brand-mark),
+nav button > span:not(.nav-glyph),
+nav button i {
+  min-width: 0;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity 0.18s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    max-width 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.32s;
+}
+
+.brand-block > div:not(.brand-mark) {
+  max-width: 210px;
+  white-space: nowrap;
+}
+
+nav button > span:not(.nav-glyph) {
+  max-width: 160px;
+  white-space: nowrap;
+}
+
+nav button i {
+  width: 8px;
+}
+
 .sidebar-collapse {
   justify-self: end;
   width: 38px;
@@ -337,9 +372,13 @@ h3,
 
 .sidebar.collapsed .brand-block > div:not(.brand-mark),
 .sidebar.collapsed nav button > span:not(.nav-glyph),
-.sidebar.collapsed nav button i,
-.sidebar.collapsed .status-line {
-  display: none;
+.sidebar.collapsed nav button i {
+  max-width: 0;
+  width: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-8px);
 }
 
 .sidebar.collapsed .sidebar-collapse {
@@ -360,10 +399,20 @@ nav button {
   min-height: 56px;
   padding: 10px 12px;
   text-align: left;
+  overflow: hidden;
+  transition:
+    grid-template-columns 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    gap 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
 }
 
 .sidebar.collapsed nav button {
-  grid-template-columns: 28px;
+  grid-template-columns: 28px minmax(0, 0fr) 0;
+  gap: 0;
   justify-content: center;
   padding: 12px;
 }
@@ -430,10 +479,34 @@ nav button.active:hover:not(:disabled) em {
 .status-line {
   display: grid;
   gap: 6px;
+  max-height: 190px;
   padding: 14px;
   border: 1px solid rgba(95, 119, 136, 0.12);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.68);
+  overflow: hidden;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    max-height 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.18s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.18s ease,
+    background 0.18s ease,
+    visibility 0.28s;
+}
+
+.sidebar.collapsed .status-line {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-color: transparent;
+  background: transparent;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
 }
 
 .status-line strong {
@@ -1403,6 +1476,15 @@ pre {
   .sidebar.collapsed .brand-block > div:not(.brand-mark),
   .sidebar.collapsed nav button > span:not(.nav-glyph) {
     display: grid;
+    max-width: none;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .sidebar.collapsed .brand-block {
+    justify-content: flex-start;
   }
 
   .status-line,
@@ -1424,6 +1506,7 @@ pre {
   nav button,
   .sidebar.collapsed nav button {
     grid-template-columns: 22px minmax(0, 1fr);
+    gap: 8px;
     min-height: 50px;
     padding: 9px 10px;
   }
