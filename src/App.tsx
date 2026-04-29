@@ -573,7 +573,7 @@ export default function App() {
   const [exportScope, setExportScope] = useState("all");
   const [exportStatus, setExportStatus] = useState("");
   const [mappingsDraft, setMappingsDraft] = useState<ExportMapping[]>([]);
-  const [aiSummaryDraft, setAiSummaryDraft] = useState("");
+  const [aiSummaryDrafts, setAiSummaryDrafts] = useState<Record<string, string>>({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [busyMessage, setBusyMessage] = useState("");
   const [errorNotice, setErrorNotice] = useState("");
@@ -751,6 +751,16 @@ export default function App() {
     () => (state?.cases || []).find((item) => item.id === selectedCaseId),
     [state, selectedCaseId]
   );
+  const selectedAiSummaryDraft = selectedCaseId
+    ? Object.prototype.hasOwnProperty.call(aiSummaryDrafts, selectedCaseId)
+      ? aiSummaryDrafts[selectedCaseId]
+      : selectedCase?.ai_progress_summary || ""
+    : "";
+
+  function setSelectedAiSummaryDraft(value: string) {
+    if (!selectedCaseId) return;
+    setAiSummaryDrafts((current) => ({ ...current, [selectedCaseId]: value }));
+  }
 
   function editCase(item?: CaseRecord) {
     const next = item ? { ...item, custom_values: { ...(item.custom_values || {}) } } : emptyCase();
@@ -843,14 +853,14 @@ export default function App() {
     }
     await withBusy("正在整理事件进度摘要...", async () => {
       const result = await window.lawyerAPI.call("generateProgressSummary", { caseId });
-      setAiSummaryDraft(result.summary || "");
+      setAiSummaryDrafts((current) => ({ ...current, [caseId]: result.summary || "" }));
       setMessage(result.usedLlm ? "大模型已整理进度，请确认后保存" : "未配置大模型，已生成本地事件流水摘要");
     }).catch(showError);
   }
 
   async function saveAiSummary() {
     if (!selectedCaseId) return;
-    await call("saveProgressSummary", { caseId: selectedCaseId, summary: aiSummaryDraft }, "AI/摘要进度已确认保存");
+    await call("saveProgressSummary", { caseId: selectedCaseId, summary: selectedAiSummaryDraft }, "AI/摘要进度已确认保存");
   }
 
   async function exportExcel() {
@@ -1015,8 +1025,8 @@ export default function App() {
             openDocumentFolder={openDocumentFolder}
             editEvent={(event) => setEventDraft(event)}
             generateAiSummary={generateAiSummary}
-            aiSummaryDraft={aiSummaryDraft}
-            setAiSummaryDraft={setAiSummaryDraft}
+            aiSummaryDraft={selectedAiSummaryDraft}
+            setAiSummaryDraft={setSelectedAiSummaryDraft}
             saveAiSummary={saveAiSummary}
           />
         )}
