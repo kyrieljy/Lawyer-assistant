@@ -202,7 +202,7 @@ def now():
 def data_dir():
     root = os.environ.get("LAWYER_ASSISTANT_DATA_DIR")
     if not root:
-        root = str(Path.cwd() / ".lawyer-case-assistant-data")
+        root = str(Path(__file__).resolve().parents[1] / ".lawyer-case-assistant-data")
     path = Path(root)
     path.mkdir(parents=True, exist_ok=True)
     return path
