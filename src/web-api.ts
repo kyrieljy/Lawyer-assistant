@@ -1,6 +1,13 @@
 async function parseResponse(response: Response) {
   const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
+  let data: any = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { detail: text };
+    }
+  }
   if (!response.ok) {
     throw new Error(data.detail || data.error || response.statusText || "请求失败");
   }

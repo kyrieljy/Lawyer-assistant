@@ -302,7 +302,12 @@ def export_excel(
     if not default_name.lower().endswith(".xlsx"):
         default_name += ".xlsx"
     output_path = EXPORT_DIR / default_name
-    result = backend.export_excel({"outputPath": str(output_path), "scope": payload.get("scope", {"mode": "all"})})
+    try:
+        result = backend.export_excel({"outputPath": str(output_path), "scope": payload.get("scope", {"mode": "all"})})
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"导出 Excel 失败：{exc}")
     backend.log_business_action(user, "导出 Excel", "export", "", f"案件数：{result.get('count', 0)}", client_ip(request))
     headers = {
         "X-Export-Count": str(result.get("count", 0)),
