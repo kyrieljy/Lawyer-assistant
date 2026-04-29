@@ -518,12 +518,32 @@ function BusinessLogsView(props: { logs: BusinessLog[]; refresh: () => void }) {
 
 function AccountManagementView(props: {
   users: AuthUser[];
+  inviteCode: string;
   refresh: () => void;
+  refreshInviteCode: () => void;
+  resetInviteCode: () => void;
   toggleUser: (user: AuthUser) => void;
   resetPassword: (user: AuthUser) => void;
 }) {
   return (
     <div className="stack">
+      <section className="panel invite-panel">
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">TEAM INVITE</span>
+            <h2>注册邀请码</h2>
+          </div>
+          <div className="actions">
+            <button className="secondary" onClick={props.refreshInviteCode}>刷新显示</button>
+            <button onClick={props.resetInviteCode}>重置邀请码</button>
+          </div>
+        </div>
+        <p className="hint">新成员注册时必须填写当前邀请码。重置后，旧邀请码立即失效。</p>
+        <div className="invite-code-box" aria-label="当前注册邀请码">
+          {props.inviteCode || "------"}
+        </div>
+      </section>
+
       <section className="panel">
         <div className="panel-heading">
           <div>
@@ -1055,10 +1075,6 @@ export default function App() {
         )}
         {tab === "settings" && (
           <SettingsView
-            isAdmin={!!authUser.is_admin}
-            inviteCode={inviteCode}
-            refreshInviteCode={() => loadInviteCode().catch(showError)}
-            resetInviteCode={resetInviteCode}
             fields={state.fields}
             settingsDraft={settingsDraft}
             setSettingsDraft={setSettingsDraft}
@@ -1100,7 +1116,10 @@ export default function App() {
         {tab === "accounts" && authUser.is_admin && (
           <AccountManagementView
             users={users}
+            inviteCode={inviteCode}
             refresh={() => loadUsers().catch(showError)}
+            refreshInviteCode={() => loadInviteCode().catch(showError)}
+            resetInviteCode={resetInviteCode}
             toggleUser={toggleUser}
             resetPassword={resetUserPassword}
           />
@@ -1805,10 +1824,6 @@ function ExportView(props: {
 }
 
 function SettingsView(props: {
-  isAdmin: boolean;
-  inviteCode: string;
-  refreshInviteCode: () => void;
-  resetInviteCode: () => void;
   fields: CaseField[];
   settingsDraft: Record<string, string>;
   setSettingsDraft: (settings: Record<string, string> | ((current: Record<string, string>) => Record<string, string>)) => void;
@@ -1844,25 +1859,6 @@ function SettingsView(props: {
   }
   return (
     <div className="stack">
-      {props.isAdmin && (
-        <section className="panel invite-panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">TEAM INVITE</span>
-              <h2>注册邀请码</h2>
-            </div>
-            <div className="actions">
-              <button className="secondary" onClick={props.refreshInviteCode}>刷新显示</button>
-              <button onClick={props.resetInviteCode}>重置邀请码</button>
-            </div>
-          </div>
-          <p className="hint">新成员注册时必须填写当前邀请码。重置后，旧邀请码立即失效。</p>
-          <div className="invite-code-box" aria-label="当前注册邀请码">
-            {props.inviteCode || "------"}
-          </div>
-        </section>
-      )}
-
       <section className="panel">
         <div className="panel-heading">
           <h2>设置中心</h2>
