@@ -43,6 +43,14 @@ WRITE_ACTIONS = {
     "makeBackup": "创建备份",
 }
 
+ADMIN_COMMANDS = {
+    "saveSettings",
+    "saveField",
+    "reorderFields",
+    "saveExportMappings",
+    "makeBackup",
+}
+
 
 def safe_filename(name: str, fallback: str) -> str:
     cleaned = "".join(ch if ch not in '\\/:*?"<>|' else "_" for ch in (name or "").strip())
@@ -138,6 +146,7 @@ def auth_register(request: Request, response: Response, payload: dict[str, Any] 
             payload.get("fullName", ""),
             payload.get("position", ""),
             payload.get("password", ""),
+            payload.get("inviteCode", ""),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -196,6 +205,21 @@ def update_user(
     return {"ok": True, "user": user, "users": backend.list_users()}
 
 
+@app.get("/api/admin/invite-code")
+def get_invite_code(_admin: dict[str, Any] = Depends(require_admin)) -> dict[str, Any]:
+    return {"ok": True, "inviteCode": backend.get_registration_invite_code()}
+
+
+@app.post("/api/admin/invite-code/reset")
+def reset_invite_code(
+    request: Request,
+    admin: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    code = backend.reset_registration_invite_code()
+    backend.log_business_action(admin, "重置注册邀请码", "settings", "", "注册邀请码已重置", client_ip(request))
+    return {"ok": True, "inviteCode": code}
+
+
 @app.post("/api/call/{command}")
 def call_backend(
     command: str,
@@ -205,7 +229,11 @@ def call_backend(
 ) -> JSONResponse:
     if command not in backend.COMMANDS or command == "exportExcel":
         raise HTTPException(status_code=404, detail=f"Unknown command: {command}")
+    if command in ADMIN_COMMANDS and not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="只有管理员可以执行该操作")
     result = backend.COMMANDS[command](payload or {})
+    if command == "getState" and not user.get("is_admin"):
+        result["settings"] = {}
     if command in WRITE_ACTIONS:
         target_type, target_id, detail = summarize_payload(command, payload or {})
         backend.log_business_action(user, WRITE_ACTIONS[command], target_type, target_id, detail, client_ip(request))
@@ -241,7 +269,7 @@ async def upload_temp(
 async def import_database(
     request: Request,
     database: UploadFile = File(...),
-    user: dict[str, Any] = Depends(require_user),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, Any]:
     TEMP_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     filename = safe_filename(database.filename or "", "uploaded-app.db")

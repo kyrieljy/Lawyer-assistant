@@ -10,6 +10,8 @@ import sqlite3
 import sys
 import tempfile
 import uuid
+import secrets
+import string
 import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
@@ -89,6 +91,8 @@ SERVICE_NAME = "lawyer-case-assistant"
 SESSION_DAYS = 14
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_PASSWORD = "admin666"
+INVITE_CODE_SETTING = "registration_invite_code"
+INVITE_CODE_ALPHABET = string.ascii_letters + string.digits
 
 CASE_STATUS_OPTIONS = [
     "财产保全",
@@ -249,6 +253,10 @@ def verify_password(password, stored_hash):
 
 def new_id(prefix):
     return f"{prefix}_{uuid.uuid4().hex[:16]}"
+
+
+def generate_invite_code():
+    return "".join(secrets.choice(INVITE_CODE_ALPHABET) for _ in range(6))
 
 
 def read_payload():
@@ -553,6 +561,15 @@ def seed_defaults(conn):
             "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
             (key, value, timestamp),
         )
+    invite_code = conn.execute(
+        "SELECT value FROM settings WHERE key = ?",
+        (INVITE_CODE_SETTING,),
+    ).fetchone()
+    if not invite_code:
+        conn.execute(
+            "INSERT INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
+            (INVITE_CODE_SETTING, generate_invite_code(), timestamp),
+        )
     for index, (field_key, label, field_type) in enumerate(CORE_FIELDS, start=1):
         options_json = json.dumps(CASE_STATUS_OPTIONS, ensure_ascii=False) if field_key == "status" else "[]"
         conn.execute(
@@ -663,11 +680,13 @@ def get_state(_payload):
         init_schema(conn)
         seed_defaults(conn)
         repair_legacy_mojibake(conn)
+        settings = get_settings(conn)
+        settings.pop(INVITE_CODE_SETTING, None)
         return {
             "ok": True,
             "dataDir": str(data_dir()),
             "dbPath": str(db_path()),
-            "settings": get_settings(conn),
+            "settings": settings,
             "fields": get_fields(conn),
             "cases": get_cases(conn),
             "events": [row_to_dict(row) for row in conn.execute("SELECT * FROM events ORDER BY event_date DESC, created_at DESC").fetchall()],
@@ -2060,7 +2079,46 @@ def public_user(row):
     return data
 
 
-def register_user(username, full_name, position, password):
+def get_registration_invite_code():
+    with connect() as conn:
+        init_schema(conn)
+        seed_defaults(conn)
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key = ?",
+            (INVITE_CODE_SETTING,),
+        ).fetchone()
+        return row["value"] if row else ""
+
+
+def reset_registration_invite_code():
+    code = generate_invite_code()
+    timestamp = now()
+    with connect() as conn:
+        init_schema(conn)
+        seed_defaults(conn)
+        conn.execute(
+            """
+            INSERT INTO settings(key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+            """,
+            (INVITE_CODE_SETTING, code, timestamp),
+        )
+        conn.commit()
+    return code
+
+
+def invite_code_matches(conn, invite_code):
+    invite_code = (invite_code or "").strip()
+    row = conn.execute(
+        "SELECT value FROM settings WHERE key = ?",
+        (INVITE_CODE_SETTING,),
+    ).fetchone()
+    stored_code = row["value"] if row else ""
+    return bool(invite_code and stored_code and hmac.compare_digest(invite_code, stored_code))
+
+
+def register_user(username, full_name, position, password, invite_code=""):
     username = (username or "").strip()
     full_name = (full_name or "").strip()
     position = (position or "").strip()
@@ -2074,6 +2132,8 @@ def register_user(username, full_name, position, password):
     with connect() as conn:
         init_schema(conn)
         seed_defaults(conn)
+        if not invite_code_matches(conn, invite_code):
+            raise ValueError("邀请码不正确")
         existing = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
         if existing:
             raise ValueError("用户名已存在")

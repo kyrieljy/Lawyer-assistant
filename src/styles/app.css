@@ -744,6 +744,25 @@ label span {
   background: rgba(255, 255, 255, 0.56);
 }
 
+.invite-panel {
+  background: linear-gradient(135deg, rgba(232, 249, 253, 0.96), rgba(255, 255, 255, 0.9));
+}
+
+.invite-code-box {
+  display: inline-grid;
+  min-width: 180px;
+  place-items: center;
+  padding: 16px 22px;
+  border: 1px solid rgba(17, 168, 207, 0.28);
+  border-radius: 8px;
+  background: white;
+  color: #07475a;
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
 .ios-switch {
   position: relative;
   display: inline-flex;
@@ -1278,6 +1297,7 @@ pre {
   .sidebar {
     position: static;
     height: auto;
+    grid-template-rows: auto auto auto;
   }
 
   .content {
@@ -1308,6 +1328,262 @@ pre {
   .case-event-heading,
   .workflow-header,
   .topbar {
+    display: grid;
+  }
+
+  .log-row,
+  .account-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  body {
+    background: linear-gradient(180deg, #f8fbfd 0%, #edf4f8 100%);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-size: 15px;
+  }
+
+  .auth-shell,
+  .loading {
+    padding: 14px;
+  }
+
+  .auth-card,
+  .startup-card,
+  .panel,
+  .dashboard-hero {
+    padding: 16px;
+    box-shadow: 0 16px 44px rgba(60, 78, 92, 0.09);
+  }
+
+  .auth-card h1 {
+    font-size: 24px;
+  }
+
+  .app-shell,
+  .app-shell.sidebar-collapsed {
+    display: block;
+  }
+
+  .sidebar,
+  .sidebar.collapsed {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    gap: 12px;
+    padding: 14px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(95, 119, 136, 0.12);
+    background: rgba(246, 251, 254, 0.94);
+  }
+
+  .brand-block {
+    gap: 10px;
+  }
+
+  .brand-block h1 {
+    font-size: 18px;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sidebar-collapse {
+    display: none;
+  }
+
+  .sidebar.collapsed .brand-block > div:not(.brand-mark),
+  .sidebar.collapsed nav button > span:not(.nav-glyph) {
+    display: grid;
+  }
+
+  .status-line,
+  .sidebar.collapsed .status-line,
+  .sidebar.collapsed nav button i {
+    display: none;
+  }
+
+  nav {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(118px, 1fr);
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    overscroll-behavior-x: contain;
+  }
+
+  nav button,
+  .sidebar.collapsed nav button {
+    grid-template-columns: 22px minmax(0, 1fr);
+    min-height: 50px;
+    padding: 9px 10px;
+  }
+
+  nav button i {
+    display: none;
+  }
+
+  .nav-glyph,
+  .quick-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  nav button strong {
+    font-size: 14px;
+  }
+
+  nav button em {
+    font-size: 11px;
+  }
+
+  .content {
+    padding: 16px 14px 30px;
+  }
+
+  .topbar {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .topbar h2 {
+    font-size: 23px;
+  }
+
+  .operator-pill {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-hero {
+    min-height: auto;
+    gap: 18px;
+  }
+
+  .dashboard-hero h2 {
+    margin: 12px 0 10px;
+    font-size: 30px;
+  }
+
+  .dashboard-hero p {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric {
+    min-height: 96px;
+    padding: 14px;
+  }
+
+  .metric strong {
+    font-size: 30px;
+  }
+
+  .panel-heading,
+  .workflow-header,
+  .opposing-header {
+    display: grid;
+    align-items: start;
+  }
+
+  .actions,
+  .hero-actions,
+  .editor-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .actions button,
+  .hero-actions button,
+  .editor-actions button {
+    width: 100%;
+  }
+
+  .inline-input {
+    display: grid;
+  }
+
+  .case-list {
+    max-height: none;
+  }
+
+  .case-event-heading {
+    display: grid;
+  }
+
+  .event-sequence li {
+    gap: 6px;
+  }
+
+  .detail-event-body {
+    padding: 13px;
+  }
+
+  .detail-callout {
+    display: grid;
+  }
+
+  .quick-row {
+    grid-template-columns: 30px 1fr;
+  }
+
+  .quick-row i {
+    display: none;
+  }
+
+  .log-row,
+  .account-row {
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid rgba(95, 119, 136, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .account-row .actions {
+    justify-content: stretch;
+  }
+
+  .invite-code-box {
+    width: 100%;
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 430px) {
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-block h1,
+  .topbar h2 {
+    font-size: 20px;
+  }
+
+  .panel,
+  .dashboard-hero,
+  .auth-card {
+    padding: 14px;
+  }
+
+  .status-chip-list,
+  .detail-meta,
+  .detail-tags,
+  .detail-files {
     display: grid;
   }
 }

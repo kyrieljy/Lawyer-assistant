@@ -394,10 +394,10 @@ function DashboardView(props: {
 
 function AuthView(props: {
   onLogin: (payload: { username: string; password: string }) => Promise<void>;
-  onRegister: (payload: { username: string; fullName: string; position: string; password: string }) => Promise<void>;
+  onRegister: (payload: { username: string; fullName: string; position: string; password: string; inviteCode: string }) => Promise<void>;
 }) {
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [draft, setDraft] = useState({ username: "", fullName: "", position: "", password: "" });
+  const [draft, setDraft] = useState({ username: "", fullName: "", position: "", password: "", inviteCode: "" });
   const [error, setError] = useState("");
 
   async function submit(event: FormEvent) {
@@ -408,6 +408,7 @@ function AuthView(props: {
         await props.onLogin({ username: draft.username, password: draft.password });
       } else {
         if (draft.password.length <= 6) throw new Error("密码必须大于6位");
+        if (!draft.inviteCode.trim()) throw new Error("邀请码不能为空");
         await props.onRegister(draft);
       }
     } catch (err) {
@@ -426,7 +427,7 @@ function AuthView(props: {
             className={mode === "login" ? "active" : ""}
             onClick={() => {
               setMode("login");
-              setDraft({ username: "", fullName: "", position: "", password: "" });
+              setDraft({ username: "", fullName: "", position: "", password: "", inviteCode: "" });
             }}
           >
             登录
@@ -436,7 +437,7 @@ function AuthView(props: {
             className={mode === "register" ? "active" : ""}
             onClick={() => {
               setMode("register");
-              setDraft({ username: "", fullName: "", position: "", password: "" });
+              setDraft({ username: "", fullName: "", position: "", password: "", inviteCode: "" });
             }}
           >
             注册
@@ -459,6 +460,15 @@ function AuthView(props: {
             <label>
               <span>职位</span>
               <input value={draft.position} onChange={(event) => setDraft({ ...draft, position: event.target.value })} />
+            </label>
+            <label>
+              <span>邀请码</span>
+              <input
+                value={draft.inviteCode}
+                autoComplete="off"
+                maxLength={6}
+                onChange={(event) => setDraft({ ...draft, inviteCode: event.target.value.trim() })}
+              />
             </label>
           </>
         )}
@@ -569,6 +579,7 @@ export default function App() {
   const [errorNotice, setErrorNotice] = useState("");
   const [businessLogs, setBusinessLogs] = useState<BusinessLog[]>([]);
   const [users, setUsers] = useState<AuthUser[]>([]);
+  const [inviteCode, setInviteCode] = useState("");
   const busyRef = useRef(false);
 
   async function refresh() {
@@ -639,7 +650,10 @@ export default function App() {
     if (authUser?.is_admin && tab === "accounts") {
       loadUsers().catch(showError);
     }
-    if (authUser && !authUser.is_admin && tab === "accounts") {
+    if (authUser?.is_admin && tab === "settings") {
+      loadInviteCode().catch(showError);
+    }
+    if (authUser && !authUser.is_admin && ["accounts", "settings"].includes(tab)) {
       setTab("cases");
     }
   }, [authUser, tab]);
@@ -653,7 +667,7 @@ export default function App() {
     });
   }
 
-  async function register(payload: { username: string; fullName: string; position: string; password: string }) {
+  async function register(payload: { username: string; fullName: string; position: string; password: string; inviteCode: string }) {
     await withBusy("正在注册账号...", async () => {
       const result = await window.lawyerAPI.register(payload);
       setAuthUser(result.user);
@@ -682,6 +696,19 @@ export default function App() {
   async function loadUsers() {
     const result = await window.lawyerAPI.listUsers();
     setUsers(result.users || []);
+  }
+
+  async function loadInviteCode() {
+    const result = await window.lawyerAPI.getInviteCode();
+    setInviteCode(result.inviteCode || "");
+  }
+
+  async function resetInviteCode() {
+    await withBusy("正在重置邀请码...", async () => {
+      const result = await window.lawyerAPI.resetInviteCode();
+      setInviteCode(result.inviteCode || "");
+      setMessage("注册邀请码已重置");
+    }).catch(showError);
   }
 
   async function toggleUser(user: AuthUser) {
@@ -888,7 +915,7 @@ export default function App() {
 
   const navItems: string[][] = authUser.is_admin
     ? [...TAB_ITEMS, ["accounts", "账号管理", "团队"]]
-    : TAB_ITEMS;
+    : TAB_ITEMS.filter(([key]) => key !== "settings");
 
   return (
     <main className={sidebarCollapsed ? "app-shell sidebar-collapsed" : "app-shell"}>
@@ -1018,6 +1045,10 @@ export default function App() {
         )}
         {tab === "settings" && (
           <SettingsView
+            isAdmin={!!authUser.is_admin}
+            inviteCode={inviteCode}
+            refreshInviteCode={() => loadInviteCode().catch(showError)}
+            resetInviteCode={resetInviteCode}
             fields={state.fields}
             settingsDraft={settingsDraft}
             setSettingsDraft={setSettingsDraft}
@@ -1764,6 +1795,10 @@ function ExportView(props: {
 }
 
 function SettingsView(props: {
+  isAdmin: boolean;
+  inviteCode: string;
+  refreshInviteCode: () => void;
+  resetInviteCode: () => void;
   fields: CaseField[];
   settingsDraft: Record<string, string>;
   setSettingsDraft: (settings: Record<string, string> | ((current: Record<string, string>) => Record<string, string>)) => void;
@@ -1799,6 +1834,25 @@ function SettingsView(props: {
   }
   return (
     <div className="stack">
+      {props.isAdmin && (
+        <section className="panel invite-panel">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">TEAM INVITE</span>
+              <h2>注册邀请码</h2>
+            </div>
+            <div className="actions">
+              <button className="secondary" onClick={props.refreshInviteCode}>刷新显示</button>
+              <button onClick={props.resetInviteCode}>重置邀请码</button>
+            </div>
+          </div>
+          <p className="hint">新成员注册时必须填写当前邀请码。重置后，旧邀请码立即失效。</p>
+          <div className="invite-code-box" aria-label="当前注册邀请码">
+            {props.inviteCode || "------"}
+          </div>
+        </section>
+      )}
+
       <section className="panel">
         <div className="panel-heading">
           <h2>设置中心</h2>

@@ -97,7 +97,7 @@ window.lawyerAPI = {
     return postJson("/api/auth/login", payload);
   },
 
-  async register(payload: { username: string; fullName: string; position: string; password: string }) {
+  async register(payload: { username: string; fullName: string; position: string; password: string; inviteCode: string }) {
     return postJson("/api/auth/register", payload);
   },
 
@@ -117,6 +117,15 @@ window.lawyerAPI = {
 
   async updateUser(userId: string, payload: { active?: boolean; password?: string }) {
     return postJson(`/api/users/${encodeURIComponent(userId)}`, payload);
+  },
+
+  async getInviteCode() {
+    const response = await fetch("/api/admin/invite-code", { credentials: "include" });
+    return parseResponse(response);
+  },
+
+  async resetInviteCode() {
+    return postJson("/api/admin/invite-code/reset", {});
   },
 
   async uploadDatabase() {
