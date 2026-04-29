@@ -324,8 +324,7 @@ def export_excel(
             traceback.print_exc()
         headers = {
             "X-Export-Count": str(result.get("count", 0)),
-            "X-Export-Path": str(output_path),
-            "Access-Control-Expose-Headers": "X-Export-Count, X-Export-Path",
+            "Access-Control-Expose-Headers": "X-Export-Count",
         }
         return FileResponse(
             str(output_path),
