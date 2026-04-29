@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,19 @@ TEMP_UPLOAD_DIR = backend.data_dir() / "tmp_uploads"
 SESSION_COOKIE = "lawyer_session"
 
 app = FastAPI(title="律师案件进度助手 H5 API")
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "ok": False,
+            "detail": f"服务器内部错误：{type(exc).__name__}: {exc}",
+            "error": type(exc).__name__,
+        },
+    )
 
 WRITE_ACTIONS = {
     "saveSettings": "保存系统设置",
@@ -297,29 +311,35 @@ def export_excel(
     payload: dict[str, Any] = Body(default_factory=dict),
     user: dict[str, Any] = Depends(require_user),
 ) -> FileResponse:
-    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
-    default_name = safe_filename(payload.get("defaultName", ""), "案件进度表.xlsx")
-    if not default_name.lower().endswith(".xlsx"):
-        default_name += ".xlsx"
-    output_path = EXPORT_DIR / default_name
     try:
+        EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+        default_name = safe_filename(payload.get("defaultName", ""), "案件进度表.xlsx")
+        if not default_name.lower().endswith(".xlsx"):
+            default_name += ".xlsx"
+        output_path = EXPORT_DIR / default_name
         result = backend.export_excel({"outputPath": str(output_path), "scope": payload.get("scope", {"mode": "all"})})
+        try:
+            backend.log_business_action(user, "导出 Excel", "export", "", f"案件数：{result.get('count', 0)}", client_ip(request))
+        except Exception:
+            traceback.print_exc()
+        headers = {
+            "X-Export-Count": str(result.get("count", 0)),
+            "X-Export-Path": str(output_path),
+            "Access-Control-Expose-Headers": "X-Export-Count, X-Export-Path",
+        }
+        return FileResponse(
+            str(output_path),
+            filename=default_name,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers=headers,
+        )
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"导出 Excel 失败：{exc}")
-    backend.log_business_action(user, "导出 Excel", "export", "", f"案件数：{result.get('count', 0)}", client_ip(request))
-    headers = {
-        "X-Export-Count": str(result.get("count", 0)),
-        "X-Export-Path": str(output_path),
-        "Access-Control-Expose-Headers": "X-Export-Count, X-Export-Path",
-    }
-    return FileResponse(
-        str(output_path),
-        filename=default_name,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers=headers,
-    )
+        traceback.print_exception(type(exc), exc, exc.__traceback__)
+        raise HTTPException(status_code=500, detail=f"导出 Excel 失败：{type(exc).__name__}: {exc}")
 
 
 @app.get("/api/download-file")
