@@ -1155,6 +1155,51 @@ def event_progress(conn, case_id):
     return "\n".join(parts)
 
 
+def clean_ai_progress_summary(text):
+    text = (text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        return ""
+    text = re.sub(r"```(?:\w+)?", "", text)
+    text = text.replace("```", "")
+    lines = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        compact = re.sub(r"\s+", "", line)
+        if re.fullmatch(r"\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?", line):
+            continue
+        if line.startswith("|") and line.endswith("|"):
+            cells = [cell.strip() for cell in line.strip("|").split("|")]
+            if all(not cell for cell in cells):
+                continue
+            header_words = {"日期", "时间", "事件", "事项", "内容", "进展", "工作进度", "说明", "状态"}
+            if any(cell in header_words for cell in cells) and not any(re.search(r"\d{4}[-年/\.]\d{1,2}", cell) for cell in cells):
+                continue
+            line = " ".join(cell for cell in cells if cell)
+        if any(
+            phrase in compact
+            for phrase in (
+                "以下是根据您提供",
+                "以下是根据你提供",
+                "以下是案件事件流水",
+                "以下为根据",
+                "适用于Excel",
+                "适合Excel",
+                "未编造任何内容",
+                "按时间顺序列出关键信息",
+                "每行对应一个独立事件",
+            )
+        ):
+            continue
+        line = re.sub(r"^#{1,6}\s*", "", line)
+        line = re.sub(r"^\s*(?:[-*•]|\d+[.)、])\s*", "", line)
+        line = line.replace("**", "").replace("__", "").replace("`", "")
+        if line:
+            lines.append(line)
+    return "\n".join(lines).strip()
+
+
 def todo_deadline_text(conn, case_row):
     parts = []
     if case_row["todo_summary"]:
@@ -1806,22 +1851,34 @@ def generate_progress_summary(payload):
         summary = "\n".join(lines[-12:]) if lines else "暂无事件流水。"
         return {"ok": True, "summary": summary, "usedLlm": False}
     prompt = (
-        "你是律师案件进度助理。请把以下案件事件流水整理成 Excel 进度表可用的工作进度。"
-        "要求：按时间顺序，保留关键日期、法院/当事人动作、期限和当前状态；不要编造事实；用中文；输出不超过800字。\n\n"
+        "请把以下案件事件流水整理成 Excel 单元格可直接使用的工作进度纯文本。\n"
+        "硬性要求：\n"
+        "1. 直接输出整理后的进度内容，不要写“以下是”“根据您提供”“适用于Excel”等抬头或说明。\n"
+        "2. 不要使用 Markdown，不要输出表格，不要使用 | 分隔线，不要使用代码块。\n"
+        "3. 每个关键事件单独一行，格式建议为“日期 事项”。\n"
+        "4. 按时间顺序，保留关键日期、法院/当事人动作、期限和当前状态。\n"
+        "5. 不要编造事实；缺失的信息不要补写；总字数不超过800字。\n\n"
+        "案件事件流水：\n"
         + progress
     )
     summary = openai_chat(
         settings["llm_base_url"],
         settings["llm_api_key"],
         settings["llm_model_name"],
-        [{"role": "user", "content": prompt}],
+        [
+            {
+                "role": "system",
+                "content": "你是律师案件进度助理。你的输出会直接写入 Excel 单元格，只能输出纯文本进度内容。",
+            },
+            {"role": "user", "content": prompt},
+        ],
     )
-    return {"ok": True, "summary": summary, "usedLlm": True}
+    return {"ok": True, "summary": clean_ai_progress_summary(summary), "usedLlm": True}
 
 
 def save_progress_summary(payload):
     case_id = payload.get("caseId")
-    summary = payload.get("summary", "")
+    summary = clean_ai_progress_summary(payload.get("summary", ""))
     with connect() as conn:
         conn.execute(
             "UPDATE cases SET ai_progress_summary = ?, ai_progress_confirmed_at = ?, updated_at = ? WHERE id = ?",
